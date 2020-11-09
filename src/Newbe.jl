@@ -5,9 +5,10 @@ __precompile__(true)
 include("allmodules.jl")
 
 ### this allows to do Newbe.myColors() instal of Newbe.MyUtils.myColors()
-#using .MyUtils: myColors
-#export myColors
+using .MyUtils
+export MyUtils
 
-#using .Behavior: getEyeEvents
+using .Behavior
+export Behavior
 
 end
