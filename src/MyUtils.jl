@@ -1,6 +1,6 @@
 module MyUtils
 
-export flatten, myColors, cartesian2matrix, cartesian2polar, polar2cartesian
+export flatten, myColors, cartesian2matrix, cartesian2polar, polar2cartesian, append_sessions
 
 using Plots
 
@@ -40,6 +40,28 @@ function polar2cartesian(r, phi)
     return xy
 end
 
+
+function append_sessions( rd_a, rd; which_trial_list, which_sessions)
+
+    #
+    # INPUT
+    # rd_a: empty DataFrame()
+    # rd: Array{Newbe.Experiment.data_of_run,1}
+    # which_: indicies of sessions in rd to concatenate
+    #
+    # OUTPUT
+    # rd_a: concatenated DataFrame()
+    #
+
+    if !isempty(which_sessions)
+        rd_a = [rd_a; getfield( rd[which_sessions[1]], which_trial_list)]
+        which_sessions = which_sessions[2:end]
+        append_sessions( rd_a, rd; which_trial_list=which_trial_list, which_sessions=which_sessions)
+    else
+        return rd_a
+    end
+
+end
 
 
 end
