@@ -51,18 +51,19 @@ function trialList2DataFrame( data_dict )
     "CueTargetIndex",               #12
     "ITI",                          #13
     "LuminanceChange",              #14
-#    "NumberOfNonFixFailTrials",    #15
-#    "NumberOfValidTrials",         #16
+    "NumberOfNonFixFailTrials",    #15
+    "NumberOfValidTrials",         #16
     "ValidTargetIndex",             #17
     "WasCueValid",                  #18
     "WasFixationFailureFixPt",      #19
     "WasFixationFailureTarget",     #20
     "WasLEDChangeActive",           #21
-    "WasPauseAdded",                #22
-    "WasTimeout",                   #23
-    "WasMissed",                    #24
-    "WasInvalidTargetChosen",       #25
-    "WasValidTargetChosen",         #26
+    "WasPauseAdded",                #22 -> PauseDuration
+    "WasTimeout",                   #23 <=> no reward
+    "WasMissed",                    #24 # no initial fixation
+####    "WasInvalidTargetChosen",       #25 # incorerect or no target chosen
+    "Hit",         #26 # no init fixation failure and no time out
+    #
     "Valid",
     "Invalid",
     "Hit",
