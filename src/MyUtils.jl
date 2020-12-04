@@ -1,8 +1,11 @@
 module MyUtils
 
-export flatten, myColors, cartesian2matrix, cartesian2polar, polar2cartesian, append_sessions
+export flatten, myColors, cartesian2matrix, cartesian2polar, polar2cartesian, append_sessions, convexHullCircum, foo
 
 using Plots
+using Polyhedra
+import GLPK
+lib = DefaultLibrary{Float64}(GLPK.Optimizer)
 
 function flatten(x)
     return collect(Iterators.flatten(x))
@@ -63,5 +66,25 @@ function append_sessions( rd_a, rd; which_trial_list, which_sessions)
 
 end
 
+function foo(x)
+    print(x)
+end
+
+function convexHullCircum(xy::Array{Array{Float64,1},1})
+
+    xy_ = copy(xy)
+    [push!(xy_[ii], xy_[ii][1]) for ii in [1,2]]
+
+    P1 = polyhedron(vrep(
+            hcat(xy_[1], xy_[2])
+            ), lib)
+    removevredundancy!(P1)
+
+    ext = [P1.vrep.V; [P1.vrep.V[1,1] P1.vrep.V[1,2]]]
+
+    diffs = diff(ext, dims=1).^2 # compute the differences along x and y dimensions
+    return [P1, sum(sqrt.(sum(diffs, dims=2)))] #return of the length of the hull circumference
+
+end
 
 end

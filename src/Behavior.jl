@@ -29,8 +29,8 @@ function i_dt_wrapper(
     fix_duration_threshold,
     fix_dispersion_threshold,
     saccade_velocity_threshold,
-    saccade_duration_threshold,
-    blink_velocity_threshold;
+    saccade_duration_threshold;
+    #blink_velocity_threshold;
     plot_saccades=false,
     plot_fixations=false)
 
@@ -41,7 +41,7 @@ function i_dt_wrapper(
 
     for trl in range(1, size(df, 1), step=1)
 
-        xy_, fix_idx, sac_idx, blink_idx = i_dt( df[!, "EyeXY"][trl], sf, fix_duration_threshold, fix_dispersion_threshold, saccade_velocity_threshold, saccade_duration_threshold, blink_velocity_threshold );
+        xy_, fix_idx, sac_idx, blink_idx = i_dt( df[!, "EyeXY"][trl], sf, fix_duration_threshold, fix_dispersion_threshold, saccade_velocity_threshold, saccade_duration_threshold);#, blink_velocity_threshold );
         df.Fixations[trl] = fix_idx
         df.Saccades[trl] = sac_idx
 
@@ -75,19 +75,23 @@ function plot_sac( df; p=plot(legend=false) )
 
 end
 
-function plot_fix( df; how_="mean", p=plot(legend=false) )
+function plot_fix( df; which_trials="all", how_="mean", which="Fixations_clean", p=plot(legend=false) )
 
-    for (itrl,trls_fixations) in enumerate(df.Fixations)
-        for sacd in trls_fixations
-            xx = df[itrl,:EyeXY][1][sacd]
-            yy = df[itrl,:EyeXY][2][sacd]
-            if how_ == "mean"
-                scatter!([mean(xx)],[mean(yy)])
-            elseif how_ == "raw"
-                scatter!(xx,yy)
+    if which_trials == "all"
+        for (itrl,trls_fixations) in enumerate(df[Symbol(which)])
+            for sacd in trls_fixations
+                # print(df[itrl,:EyeXY][1][sacd])
+                xx = df[itrl,:EyeXY][1][sacd]
+                yy = df[itrl,:EyeXY][2][sacd]
+                if how_ == "mean"
+                    scatter!([mean(xx)],[mean(yy)])
+                elseif how_ == "raw"
+                    scatter!(xx,yy)
+                end
             end
         end
     end
+
     return p
 
 end
@@ -139,6 +143,7 @@ function identify_lookedAtTargets(
                 # vec = [mean(xy_nb[itrl][1][fix]), mean(xy_nb[itrl][2][fix])]
                 vec = [mean(df.EyeXY[itrl][1][fix]), mean(df.EyeXY[itrl][2][fix])]
 
+                ### rotate fixations to prevent the cluster at 0deg to be splitted between >0 and <360
                 vec_rotated = rot_matr*vec
 
                 ### length
@@ -185,8 +190,11 @@ function identify_lookedAtTargets(
             margin_t_fix_o = 3
             margin_ts = 0.15
 
+            ### min and max vector lengths of central fixations
             c_fix = [0, x_val_two_largest_modes_vl[1]+1]
+            ### min and max vector lengths of target fixations
             t_fix = [x_val_two_largest_modes_vl[2]-margin_t_fix_i, x_val_two_largest_modes_vl[2]+margin_t_fix_o]
+            ### angular range of target fixations
             t1 = [x_val_eight_largest_modes_va[1]-margin_ts, x_val_eight_largest_modes_va[1]+margin_ts]
             t2 = [x_val_eight_largest_modes_va[2]-margin_ts, x_val_eight_largest_modes_va[2]+margin_ts]
             t3 = [x_val_eight_largest_modes_va[3]-margin_ts, x_val_eight_largest_modes_va[3]+margin_ts]
@@ -199,6 +207,8 @@ function identify_lookedAtTargets(
             fixation_types = Array{Any,1}(undef, 0)
 
             for (itrl,trls_fix) in enumerate(df.Fixations)
+                clean_fixations = []
+
                 push!(fixation_types, Array{Float64,1}(undef,0))
 
                 for (ifix,fix) in enumerate(trls_fix)
@@ -235,16 +245,24 @@ function identify_lookedAtTargets(
                         push!(fixation_types[itrl], -1)
                     end
 
+                    ### store fixations belonging to target or central fixation dot
+                    if !(fixation_types[itrl][end] == -1)
+                        push!( clean_fixations, fix )
+                    end
+
                 end
+
                 df.LookedAtTarget[itrl] = fixation_types[itrl]
+                df[itrl, :Fixations_clean] = clean_fixations
+
 
                 ### add columns Values
                 df.Valid[itrl] = (!df.WasFixationFailureFixPt[itrl]) & (any(unique(df[itrl, :LookedAtTarget]) .> 0))
                 df.Invalid[itrl] = (!df.WasFixationFailureFixPt[itrl]) & (!any(unique(df[itrl, :LookedAtTarget]) .> 0))
-                df.Hit[itrl] = (df.Valid[itrl]) & (df[itrl, :LookedAtTarget][end] == df[itrl, :ValidTargetIndex])
+                # df.Hit[itrl] = (df.Valid[itrl]) & (df[itrl, :LookedAtTarget][end] == df[itrl, :ValidTargetIndex])
                 df.FA[itrl] = (df.Valid[itrl]) & (df[itrl, :LookedAtTarget][end] != df[itrl, :ValidTargetIndex])
             end
-        end # end if plot_only
+        end # end if !plot_only
 
 
         if plot_distributions | plot_only
@@ -290,7 +308,8 @@ function i_dt(
     fix_dispersion_threshold,
     saccade_velocity_threshold,
     saccade_duration_threshold,
-    blink_velocity_threshold)
+    #blink_velocity_threshold
+    )
 
     ###########
     #
@@ -311,100 +330,110 @@ function i_dt(
     #
     ###########
 
-    xy = deepcopy(xy_o)
-    [deleteat!(xy[ii], findall(isnan.(xy[ii]))) for ii in 1:length(xy)] # remove NaNs
-    xy_ = deepcopy(xy) # to be returned with blinks interpolated
-    xy_idxs = [collect(1:length(xy[1])), collect(1:length(xy[2]))] # array with corresponding indices
-    fix_window_length = Int(fix_duration_threshold_sec * sf)
+    if size(xy_o[1],1) > 1000 # if number of samples is lower empty arrays are returned
 
-    if fix_dispersion_threshold == []
+        xy = deepcopy(xy_o)
+        [deleteat!(xy[ii], findall(isnan.(xy[ii]))) for ii in 1:length(xy)] # remove NaNs
+        xy_ = deepcopy(xy) # to be returned with blinks interpolated
+        xy_idxs = [collect(1:length(xy[1])), collect(1:length(xy[2]))] # array with corresponding indices
+        fix_window_length = Int(fix_duration_threshold_sec * sf)
 
-        fix_dispersion_threshold = maximum(xy[1][1:499])-minimum(xy[1][1:499]) + maximum(xy[2][1:499])-minimum(xy[2][1:499]) # deg
+        if fix_dispersion_threshold == []
 
-    end
+            fix_dispersion_threshold = maximum(xy[1][1:499])-minimum(xy[1][1:499]) + maximum(xy[2][1:499])-minimum(xy[2][1:499]) # deg
 
-    #
-    sac_idx = Array{Array{Int,1}, 1}(undef,0)#[]
-    fix_idx = Array{Array{Int,1}, 1}(undef,0)#[]
-    blink_idx = Array{Array{Int,1}, 1}(undef,0)#[]
-
-    ### I-DT loop:
-    while !isempty(xy_idxs[1])
-
-        if length(xy_idxs[1]) > fix_window_length
-            current_window_idxs = collect(1:fix_window_length)
-        else
-            current_window_idxs = collect(1:length(xy_idxs[1]))
         end
 
-        current_window_vals = [xy[ii][current_window_idxs] for ii in 1:2]
-        wd = (maximum(current_window_vals[1])-minimum(current_window_vals[1])) + (maximum(current_window_vals[2])-minimum(current_window_vals[2]))
+        #
+        sac_idx = Array{Array{Int,1}, 1}(undef,0)#[]
+        fix_idx = Array{Array{Int,1}, 1}(undef,0)#[]
+        blink_idx = Array{Array{Int,1}, 1}(undef,0)#[]
 
-        # if dispersion in current window is smaller than threshold
-        if wd <= fix_dispersion_threshold
+        ### I-DT loop:
+        while !isempty(xy_idxs[1])
 
-            # while this is the case and window does not exceed amount of data points add next point to window
-            while wd<=fix_dispersion_threshold && length(current_window_idxs)<length(xy[1])
+            if length(xy_idxs[1]) > fix_window_length
+                current_window_idxs = collect(1:fix_window_length)
+            else
+                # @show length(xy_idxs[1])
+                current_window_idxs = collect(1:length(xy_idxs[1])) # maximum window length is the number of data points
+            end
 
-                ### append to indices of current window
-                current_window_idxs = append!( current_window_idxs, maximum(current_window_idxs)+1 )
-                ### append to values of current widnow
-                current_window_vals[1] = xy[1][current_window_idxs]
-                current_window_vals[2] = xy[2][current_window_idxs]
-                wd = (maximum(current_window_vals[1])-minimum(current_window_vals[1])) + (maximum(current_window_vals[2])-minimum(current_window_vals[2]))
+            println(current_window_idxs)
+
+            current_window_vals = [xy[ii][current_window_idxs] for ii in 1:2]
+            wd = (maximum(current_window_vals[1])-minimum(current_window_vals[1])) + (maximum(current_window_vals[2])-minimum(current_window_vals[2]))
+
+            # if dispersion in current window is smaller than threshold
+            if wd <= fix_dispersion_threshold
+
+                # while this is the case and window does not exceed amount of data points add next point to window
+                while wd<=fix_dispersion_threshold && length(current_window_idxs)<length(xy[1])
+
+                    ### append to indices of current window
+                    current_window_idxs = append!( current_window_idxs, maximum(current_window_idxs)+1 )
+                    ### append to values of current widnow
+                    current_window_vals[1] = xy[1][current_window_idxs]
+                    current_window_vals[2] = xy[2][current_window_idxs]
+                    wd = (maximum(current_window_vals[1])-minimum(current_window_vals[1])) + (maximum(current_window_vals[2])-minimum(current_window_vals[2]))
+
+                end
+
+                ### add fixation to array and delete window from data
+                # push!( fix_idx, [xy_idxs[ii][current_window_idxs] for ii in 1:2] )
+                push!( fix_idx, xy_idxs[1][current_window_idxs] )
+                [deleteat!( xy[ii], current_window_idxs ) for ii in 1:length(xy)]
+                [deleteat!( xy_idxs[ii], current_window_idxs ) for ii in 1:length(xy_idxs)]
+
+            else # if dispersion in current window is greater than threshold delete first data point
+
+                [deleteat!( xy[ii], 1 ) for ii in 1:length(xy)]
+                [deleteat!( xy_idxs[ii], 1 ) for ii in 1:length(xy_idxs)]
 
             end
 
-            ### add fixation to array and delete window from data
-            # push!( fix_idx, [xy_idxs[ii][current_window_idxs] for ii in 1:2] )
-            push!( fix_idx, xy_idxs[1][current_window_idxs] )
-            [deleteat!( xy[ii], current_window_idxs ) for ii in 1:length(xy)]
-            [deleteat!( xy_idxs[ii], current_window_idxs ) for ii in 1:length(xy_idxs)]
+        end
 
-        else # if dispersion in current window is greater than threshold delete first data point
+        ### get saccade-like indices, i.e. those not identified as fixations
+        for (idx,fixs) in enumerate(fix_idx[1:end-1])
+            #if (fix_idx[idx+1][1][1]-fixs[1][end]) > blink_velocity_threshold # blink velocity threshold
+                # push!( sac_idx, fixs[1][end]:fix_idx[idx+1][1][1] )
+                push!( sac_idx, fixs[end]:fix_idx[idx+1][1] )
 
-            [deleteat!( xy[ii], 1 ) for ii in 1:length(xy)]
-            [deleteat!( xy_idxs[ii], 1 ) for ii in 1:length(xy_idxs)]
+            #end
+        end
+
+        ### filter blinks: saccades with velocities > threshold
+        saccade_velocities = [diff(xy_[1][sac]) for sac in sac_idx]
+        blinks = findall(maximum.(saccade_velocities) .> saccade_velocity_threshold)
+
+        for bl in blinks
+
+            push!( blink_idx, sac_idx[bl] )
 
         end
 
+        deleteat!( sac_idx, blinks )
+        deleteat!(sac_idx, findall(length.(sac_idx) .< saccade_duration_threshold*sf)) # remove implausible short saccades
+
+        ### inerpolate blinks (linear)
+        interpolated_blinks = []
+
+        for bl in 1:length(blink_idx)
+
+            push!(interpolated_blinks, range( xy_[1][minimum(blink_idx[bl])], xy_[1][maximum(blink_idx[bl])], length=length(blink_idx[bl]) ))
+
+        end
+
+        [xy_[dim][blink_idx[bl]] .= interpolated_blinks[bl] for bl in 1:length(blink_idx), dim=1:2 ] # dim is x,y dimensions of eyedata -> bot needed
+
+
+        return xy_, fix_idx, sac_idx, blink_idx
+
+    else
+        return [], [], [], []
     end
 
-    ### get saccade-like indices, i.e. those not identified as fixations
-    for (idx,fixs) in enumerate(fix_idx[1:end-1])
-        #if (fix_idx[idx+1][1][1]-fixs[1][end]) > blink_velocity_threshold # blink velocity threshold
-            # push!( sac_idx, fixs[1][end]:fix_idx[idx+1][1][1] )
-            push!( sac_idx, fixs[end]:fix_idx[idx+1][1] )
-
-        #end
-    end
-
-    ### filter blinks: saccades with velocities > threshold
-    saccade_velocities = [diff(xy_[1][sac]) for sac in sac_idx]
-    blinks = findall(maximum.(saccade_velocities) .> saccade_velocity_threshold)
-
-    for bl in blinks
-
-        push!( blink_idx, sac_idx[bl] )
-
-    end
-
-    deleteat!( sac_idx, blinks )
-    deleteat!(sac_idx, findall(length.(sac_idx) .< saccade_duration_threshold*sf)) # remove implausible short saccades
-
-    ### inerpolate blinks (linear)
-    interpolated_blinks = []
-
-    for bl in 1:length(blink_idx)
-
-        push!(interpolated_blinks, range( xy_[1][minimum(blink_idx[bl])], xy_[1][maximum(blink_idx[bl])], length=length(blink_idx[bl]) ))
-
-    end
-
-    [xy_[dim][blink_idx[bl]] .= interpolated_blinks[bl] for bl in 1:length(blink_idx), dim=1:2 ] # dim is x,y dimensions of eyedata -> bot needed
-
-
-    return xy_, fix_idx, sac_idx, blink_idx
 end
 
 
