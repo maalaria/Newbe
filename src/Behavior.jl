@@ -308,6 +308,7 @@ function i_dt(
     fix_dispersion_threshold,
     saccade_velocity_threshold,
     saccade_duration_threshold,
+    dsadsa
     #blink_velocity_threshold
     )
 
@@ -352,14 +353,16 @@ function i_dt(
         ### I-DT loop:
         while !isempty(xy_idxs[1])
 
-            if length(xy_idxs[1]) > fix_window_length
+
+
+            if length(xy_idxs[1]) > fix_window_length # check if length(xy) > fix_window_length (lower duration threshold of saccades)
                 current_window_idxs = collect(1:fix_window_length)
             else
                 # @show length(xy_idxs[1])
                 current_window_idxs = collect(1:length(xy_idxs[1])) # maximum window length is the number of data points
             end
 
-            println(current_window_idxs)
+            # println(current_window_idxs)
 
             current_window_vals = [xy[ii][current_window_idxs] for ii in 1:2]
             wd = (maximum(current_window_vals[1])-minimum(current_window_vals[1])) + (maximum(current_window_vals[2])-minimum(current_window_vals[2]))
@@ -412,7 +415,7 @@ function i_dt(
             push!( blink_idx, sac_idx[bl] )
 
         end
-
+        # delete blinks from saccades collection
         deleteat!( sac_idx, blinks )
         deleteat!(sac_idx, findall(length.(sac_idx) .< saccade_duration_threshold*sf)) # remove implausible short saccades
 
