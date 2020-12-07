@@ -307,9 +307,8 @@ function i_dt(
     fix_duration_threshold_sec,
     fix_dispersion_threshold,
     saccade_velocity_threshold,
-    saccade_duration_threshold,
-    dsadsa
-    #blink_velocity_threshold
+    saccade_duration_threshold
+    blink_velocity_threshold
     )
 
     ###########
