@@ -60,7 +60,7 @@ function i_dt_wrapper(
         return p
     end
 
-end
+end0000
 
 function plot_sac( df; p=plot(legend=false) )
 
@@ -305,10 +305,9 @@ function i_dt(
     xy_o::Array{Array{Float64,1},1},
     sf,
     fix_duration_threshold_sec,
-    fix_dispersion_threshold,
+    fix_dispersio00n_threshold,
     saccade_velocity_threshold,
     saccade_duration_threshold
-    blink_velocity_threshold
     )
 
     ###########
@@ -358,7 +357,7 @@ function i_dt(
                 current_window_idxs = collect(1:fix_window_length)
             else
                 # @show length(xy_idxs[1])
-                current_window_idxs = collect(1:length(xy_idxs[1])) # maximum window length is the number of data points
+                current_window_idxs = collect(1:length(xy_idxs[1])) # if length(xy) > fix_window_length
             end
 
             # println(current_window_idxs)
