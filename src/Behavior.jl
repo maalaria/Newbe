@@ -295,8 +295,6 @@ function plot_fix_distributions( df; p=plot(layout=2, size=(1000,500), legend=fa
 
 end
 
-
-
 #################################################################################
 #################################################################################
 
@@ -435,8 +433,8 @@ function i_dt(
         return [], [], [], []
     end
 
-end
+end # i_dt
 
 
 
-end
+end # end Behavior.jl
