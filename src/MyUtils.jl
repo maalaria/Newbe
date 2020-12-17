@@ -44,22 +44,22 @@ function polar2cartesian(r, phi)
 end
 
 
-function append_sessions( rd_a, rd; which_trial_list, which_sessions)
+function append_sessions( rd_a, rd; which_sessions)
 
     #
     # INPUT
-    # rd_a: empty DataFrame()
+    # rd_a: empty DataFrame() !!!(required since recursive implementation)!!!
     # rd: Array{Newbe.Experiment.data_of_run,1}
-    # which_: indicies of sessions in rd to concatenate
+    # which_sessions: array with indicies of sessions in rd to concatenate
     #
     # OUTPUT
     # rd_a: concatenated DataFrame()
     #
 
     if !isempty(which_sessions)
-        rd_a = [rd_a; getfield( rd[which_sessions[1]], which_trial_list)]
+        rd_a = [rd_a; getfield( rd[which_sessions[1]], :trial_list)]
         which_sessions = which_sessions[2:end]
-        append_sessions( rd_a, rd; which_trial_list=which_trial_list, which_sessions=which_sessions)
+        append_sessions( rd_a, rd; which_sessions=which_sessions)
     else
         return rd_a
     end
