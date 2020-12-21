@@ -60,10 +60,10 @@ end
 
 function plot_eye_events(
     df;
-    what="both",
+    what="both", # fixations / saccades
     how_="mean",
     which_fixations="all_fixations",
-    p=plot(legend=false) )
+    p=plot(legend=false))
 
     if what == "both" || what == "saccades"
         ### plot saccades
@@ -105,6 +105,8 @@ function plot_eye_events(
         # end
     end
 
+    xlims!(-15,15)
+    ylims!(-15,15)
     return p
 end
 
@@ -120,6 +122,7 @@ function identify_fixatedTargets(
     nbins_angles=150,
     kde_bandwidth_length=1/3,
     kde_bandwidth_angle=1/15,
+    sf=2000,
     plot_distributions=false,
     plot_only=false,
     target_rotation=22.5)
@@ -182,7 +185,7 @@ function identify_fixatedTargets(
         x_val_two_largest_modes_vl = vec_len_dens.x[x_idx_two_largest_modes_vl]
         y_val_two_largest_modes_vl = vec_len_dens.density[x_idx_two_largest_modes_vl]
         ### sort saccades according fixation vector length
-        # min and max vector lengths of central fixations
+        # min and max vector lengths of central fixations and target fixations
         c_fix = [x_val_two_largest_modes_vl[1]-1, x_val_two_largest_modes_vl[1]+1]
         margin_t_fix_i = 3
         margin_t_fix_o = 3
@@ -230,7 +233,7 @@ function identify_fixatedTargets(
         x_val_eight_largest_modes_va[false_modes] .=  theoretical_x_vals_targets_va[false_modes]
 
         ### angular range of target fixations
-        margin_ts = 0.15
+        margin_ts = 0.2
         t1 = [x_val_eight_largest_modes_va[1]-margin_ts, x_val_eight_largest_modes_va[1]+margin_ts]
         t2 = [x_val_eight_largest_modes_va[2]-margin_ts, x_val_eight_largest_modes_va[2]+margin_ts]
         t3 = [x_val_eight_largest_modes_va[3]-margin_ts, x_val_eight_largest_modes_va[3]+margin_ts]
@@ -245,7 +248,7 @@ function identify_fixatedTargets(
 
             for (ifix,fix) in enumerate(trls_fix)
 
-                ### catch target fixations
+                ### catch target fixations, could either be 0 for central fixations or -1 for noise fixations or 10 for target fixations
                 if fix == 10.0
 
                     ### sort into traget IDs
@@ -276,21 +279,50 @@ function identify_fixatedTargets(
                     push!( clean_fixations, df.Fixations[itrl][ifix] )
                 end
 
-            end
+            end # end iterate trials fixations
+
 
             if !plot_only
                 df.LookedAtTarget[itrl] = fixation_types[itrl]
 
                 ### add columns Values
-                df.Valid[itrl] = (!df.WasFixationFailureFixPt[itrl]) & (any(unique(df[itrl, :LookedAtTarget]) .> 0))
-                df.Invalid[itrl] = (!df.WasFixationFailureFixPt[itrl]) & (!any(unique(df[itrl, :LookedAtTarget]) .> 0))
+                df.Valid[itrl] = (!df.WasMissed[itrl]) & (any(unique(df[itrl, :LookedAtTarget]) .> 0))
+                df.Invalid[itrl] = (!df.WasMissed[itrl]) & (!any(unique(df[itrl, :LookedAtTarget]) .> 0))
             #     # df.Hit[itrl] = (df.Valid[itrl]) & (df[itrl, :LookedAtTarget][end] == df[itrl, :ValidTargetIndex])
                 if !isempty(df[itrl, :LookedAtTarget])
-                    df.FA[itrl] = (df.Valid[itrl]) & (df[itrl, :LookedAtTarget][end] != df[itrl, :ValidTargetIndex])
+                    df.FA[itrl] = ((df.Valid[itrl]) & (df[itrl, :LookedAtTarget][end] != df[itrl, :ValidTargetIndex])) & !(df.Hit[itrl])
                 end
+
+                ### Get reaction times
+                targetFixation_idxs = findall([ !(el in [-1,0]) for el in df[itrl,:LookedAtTarget]]) ### list of all target fixations
+                if !isempty(targetFixation_idxs)
+                    firstTargetFixation_id = minimum(targetFixation_idxs) ### the first target fixation
+                    firstTargetFixation_time = df[itrl,:Fixations][firstTargetFixation_id] / sf
+                    RT_firstTarget = minimum(firstTargetFixation_time .- df[itrl, :LuminanceChangeTime])
+
+                    if df[itrl,:LookedAtTarget][firstTargetFixation_id] == df[itrl,:ValidTargetIndex]
+                        RT_CorrectTarget = RT_firstTarget
+                    else
+                        correctTargetFixation_idxs = findall(df[itrl,:LookedAtTarget] .== df[itrl,:ValidTargetIndex]) ### list of all fixations on correct target
+                        if !isempty(correctTargetFixation_idxs)
+                            correctTargetFixation_idx = minimum(correctTargetFixation_idxs) ### the first fixation on correct target
+                            correctTargetFixation_time = df[itrl,:Fixations][correctTargetFixation_idx] / sf
+                            RT_CorrectTarget = minimum(correctTargetFixation_time .- df[itrl, :LuminanceChangeTime])
+                        else ### if correct target was not fixated
+                            RT_CorrectTarget = NaN
+                        end
+                    end
+
+                else ### if no target was fixated
+                    RT_firstTarget = NaN
+                    RT_CorrectTarget = NaN
+                end
+                df.RTfirstFixation[itrl] = RT_firstTarget
+                df.RTcorrectFixation[itrl] = RT_CorrectTarget
+
             end
 
-        end
+        end # end iterate trials
 
 
         if plot_distributions | plot_only
