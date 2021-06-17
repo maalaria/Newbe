@@ -11,4 +11,7 @@ export MyUtils
 using .Behavior
 export Behavior
 
+using .Neurons
+export Neurons
+
 end
