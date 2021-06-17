@@ -1,6 +1,6 @@
 module MyUtils
 
-export flatten, myColors, cartesian2matrix, cartesian2polar, polar2cartesian, append_sessions, convexHullCircum, foo
+export flatten, not_nan, myColors, cartesian2matrix, cartesian2polar, polar2cartesian, append_sessions, convexHullCircum, foo
 
 using Plots
 using Polyhedra
@@ -66,9 +66,6 @@ function append_sessions( rd_a, rd; which_sessions)
 
 end
 
-function foo(x)
-    print(x)
-end
 
 function convexHullCircum(xy::Array{Array{Float64,1},1})
 
@@ -86,5 +83,11 @@ function convexHullCircum(xy::Array{Array{Float64,1},1})
     return [P1, sum(sqrt.(sum(diffs, dims=2)))] #return of the length of the hull circumference
 
 end
+
+
+function non_nan(x_::Array{T,N}) where {T<:Number,N}
+    return filter( el -> !isnan(el), x_ )
+end
+
 
 end
