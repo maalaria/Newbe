@@ -1,8 +1,11 @@
 module MyUtils
 
-export flatten, myColors, cartesian2matrix, cartesian2polar, polar2cartesian
+export flatten, not_nan, myColors, cartesian2matrix, cartesian2polar, polar2cartesian, append_sessions, convexHullCircum, foo
 
 using Plots
+using Polyhedra
+import GLPK
+lib = DefaultLibrary{Float64}(GLPK.Optimizer)
 
 function flatten(x)
     return collect(Iterators.flatten(x))
@@ -40,6 +43,51 @@ function polar2cartesian(r, phi)
     return xy
 end
 
+
+function append_sessions( rd_a, rd; which_sessions)
+
+    #
+    # INPUT
+    # rd_a: empty DataFrame() !!!(required since recursive implementation)!!!
+    # rd: Array{Newbe.Experiment.data_of_run,1}
+    # which_sessions: array with indicies of sessions in rd to concatenate
+    #
+    # OUTPUT
+    # rd_a: concatenated DataFrame()
+    #
+
+    if !isempty(which_sessions)
+        rd_a = [rd_a; getfield( rd[which_sessions[1]], :trial_list)]
+        which_sessions = which_sessions[2:end]
+        append_sessions( rd_a, rd; which_sessions=which_sessions)
+    else
+        return rd_a
+    end
+
+end
+
+
+function convexHullCircum(xy::Array{Array{Float64,1},1})
+
+    xy_ = copy(xy)
+    [push!(xy_[ii], xy_[ii][1]) for ii in [1,2]]
+
+    P1 = polyhedron(vrep(
+            hcat(xy_[1], xy_[2])
+            ), lib)
+    removevredundancy!(P1)
+
+    ext = [P1.vrep.V; [P1.vrep.V[1,1] P1.vrep.V[1,2]]]
+
+    diffs = diff(ext, dims=1).^2 # compute the differences along x and y dimensions
+    return [P1, sum(sqrt.(sum(diffs, dims=2)))] #return of the length of the hull circumference
+
+end
+
+
+function non_nan(x_::Array{T,N}) where {T<:Number,N}
+    return filter( el -> !isnan(el), x_ )
+end
 
 
 end
