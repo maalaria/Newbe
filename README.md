@@ -1,13 +1,15 @@
-### A typical top-level directory layout
 
-    .
-    ├── build                   # Compiled files (alternatively `dist`)
-    ├── docs                    # Documentation files (alternatively `doc`)
-    ├── src                     # Source files (alternatively `lib` or `app`)
-    ├── test                    # Automated tests (alternatively `spec` or `tests`)
-    ├── tools                   # Tools and utilities
-    ├── LICENSE
-    └── README.md
+### experiment.jl
+
+```experiment.jl``` implements ```data_of_run::struct``` which is intended to hold all the data of one experimental sessions/ run. It has the fields:
+
++ ```date::Date```
++ ```time::DateTime```
++ ```sf::Float64```                         
++ ```trial_list::DataFrame```
+
+```trial_list``` is its heart, a DataFrame containing all dependent (eg. enural recordings, eyetracking data) and independent data. Each row represents a trial of the given session/ run.
+
 
 
 
