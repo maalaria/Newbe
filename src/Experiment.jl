@@ -55,13 +55,15 @@ function trialList2DataFrame( data_dict )
         (data_dict["TrialList"][:,24].==1, "Hit"),
         (fill(false, size(data_dict["TrialList"],1)), "FA"),
         (fill(false, size(data_dict["TrialList"],1)), "Invalid"),
-        (data_dict["TrialList"][:,23].==1, "WasMissed"),
+        (Array{Float64,1}(undef,size(data_dict["TrialList"],1)), "RTfirstFixation"),
+        (Array{Float64,1}(undef,size(data_dict["TrialList"],1)), "RTcorrectFixation"),
+        (data_dict["TrialList"][:,23].==1, "WasMissed"),                    ### !!! if this row changes, changes the part in mat2jdl() where missed trials are filtered out !!!
         (data_dict["TrialList"][:,22].==1, "WasTimeout"),
         (data_dict["TrialList"][:,16].+1, "ValidTargetIndex"),
         (data_dict["TrialList"][:,12].+1, "CueTargetIndex"),
         (data_dict["TrialList"][:,17].==1, "WasCueValid"),
-        (data_dict["TrialList"][:,18].==1, "WasFixationFailureFixPt"),
-        (data_dict["TrialList"][:,19].==1, "WasFixationFailureTarget"),
+        # (data_dict["TrialList"][:,18].==1, "WasFixationFailureFixPt"),    ### redundant with WasMissed
+        # (data_dict["TrialList"][:,19].==1, "WasFixationFailureTarget"),   ### redundant with WasTimeout
         (data_dict["TrialList"][:,14], "LuminanceChange"),
         (data_dict["TrialList"][:,11], "LuminanceChangeTime"),
         (data_dict["TrialList"][:,21], "PauseDuration"),
@@ -93,10 +95,11 @@ function mat2jdl(ifi, ofi)
 
         ### read mat files of runs specified in paths_to_mat_files and store the in data_dicts array
         data_dict = matread(mf_)
+        # @show data_dict
         #data_dict_ = deepcopy(data_dict)
 
         ### remove missed trials in data_dict
-        missed_trials_idx = findall(data_dict["TrialList"][:, 19].==1)
+        missed_trials_idx = findall(data_dict["TrialList"][:, 23].==1)
         ks = ["TargetY", "VoltX", "TargetX", "EyeT", "TargetTime", "EyeX", "EyeY", "VoltY"]
         for k in ks
             data_dict[k] = data_dict[k][:, setdiff(1:end, missed_trials_idx)]
