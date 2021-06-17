@@ -26,9 +26,7 @@ struct data_of_run
     date::Date
     time::DateTime
     sf::Float64
-    trial_list_all::DataFrame
-    trial_list_valid::DataFrame
-    trial_list_invalid::DataFrame
+    trial_list::DataFrame
 end
 
 
@@ -40,76 +38,49 @@ end
 #
 ##################################################
 function trialList2DataFrame( data_dict )
-    # specify columns names
-    column_names = [
-    "EyeXY",
-    "Neurons",
-    "TrialStartTime",               # 9
-    "TrialEndTime",                 #10
-    "LuminanceChangeTime",          #11
-    "CueTargetIndex",               #12
-    "ITI",                          #13
-    "LuminanceChange",              #14
-#    "NumberOfNonFixFailTrials",    #15
-#    "NumberOfValidTrials",         #16
-    "ValidTargetIndex",             #17
-    "WasCueValid",                  #18
-    "WasFixationFailureFixPt",      #19
-    "WasFixationFailureTarget",     #20
-    "WasLEDChangeActive",           #21
-    "WasPauseAdded",                #22
-    "WasTimeout",                   #23
-    "WasMissed",                    #24
-    "WasInvalidTargetChosen",       #25
-    "WasValidTargetChosen",         #26
-    "Valid",
-    "Hit",
-    "FA",
-    "Invalid",
-    "NumberOfSaccades",
-    "NumberOfBlinks"
-    ]
 
-    ### extract eye trace to store events in TrialList
-    xy = [[data_dict["EyeX"][:,trl], data_dict["EyeY"][:,trl]] for trl in 1:size(data_dict["EyeY"], 2)];
-    [deleteat!(xy[trl][dim], findall(isnan.(xy[trl][dim]))) for dim in [1,2], trl in 1:size(data_dict["EyeY"], 2)] # remove NaNs
-    sf = data_dict["samplingRate"]
-    fix_duration_threshold = 0.07
-    ### generate dataframe with list of trial paramters
-    trial_list = DataFrame(
-        vEyeXY = [ [data_dict["EyeX"][.!isnan.(data_dict["EyeX"][:,trl]),trl], data_dict["EyeY"][.!isnan.(data_dict["EyeY"][:,trl]),trl]] for trl in 1:size(data_dict["EyeY"],2) ],
-        vNeurons = [Neurons.recording() for ii in 1:size(data_dict["TrialList"], 1)],
-        v9 = data_dict["TrialList"][:,9],       # TrialStartTime
-        v10 = data_dict["TrialList"][:,10],   # TrialEndTime
-        v11 = data_dict["TrialList"][:,11],     # LuminanceChangeTime
-        v12 = data_dict["TrialList"][:,12],     # CueTargetIndex
-        v13 = data_dict["TrialList"][:,13],     # ITI
-        v14 = data_dict["TrialList"][:,14],     # LuminanceChange
- #       v15 = data_dict["TrialList"][:,15],    # NumberOfNonFixFailTrials
- #       v16 = data_dict["TrialList"][:,16],    # NumberOfValidTrials
-        v17 = data_dict["TrialList"][:,17],     # ValidTargetIndex
-        # the following are converted into booleans
-        v18 = data_dict["TrialList"][:,18].==1, # WasCueValid
-        v19 = data_dict["TrialList"][:,19].==1, # WasFixationFailureFixPt, i.e. trial is initiated if 0 and ignored/Miss if 1
-        v20 = data_dict["TrialList"][:,20].==1, # WasFixationFailureTarget
-        v21 = data_dict["TrialList"][:,21].==1, # WasLEDChangeActive
-        v22 = data_dict["TrialList"][:,22].==1, # WasPauseAdded
-        v23 = data_dict["TrialList"][:,23].==1, # WasTimeout
-        v24 = data_dict["TrialList"][:,24].==1, # WasMissed
-        v25 = data_dict["TrialList"][:,25].==1, # WasInvalidTargetChosen
-        v26 = data_dict["TrialList"][:,26].==1, # WasValidTargetChosen
-        vValid = (data_dict["TrialList"][:,19].==0) .& (data_dict["TrialList"][:,23].==0), #((data_dict["TrialList"][:,25].==1) .| (data_dict["TrialList"][:,26].==1)),
-        vHit = (data_dict["TrialList"][:,19].==0) .& (data_dict["TrialList"][:,26].==1),
-        vFA = (data_dict["TrialList"][:,19].==0) .& (data_dict["TrialList"][:,25].==1),
-        vInvalid = (data_dict["TrialList"][:,19].==0) .& (data_dict["TrialList"][:,23].==1),
-        vNumberOfSaccades = Array{Float64}(undef,size(data_dict["TrialList"], 1)),
-        vNumberOfBlinks = Array{Float64}(undef,size(data_dict["TrialList"], 1))
-    )
-    # rename columns
-    # names!(trial_list, [Symbol(cn) for cn in column_names])
-    rename!(trial_list, [Symbol(cn) for cn in column_names])
-    # names!(df::AbstractDataFrame, vals::Vector{Symbol}; makeunique::Bool = false)
-    # rename!(df, vals, makeunique = false)
+
+    ### orderd according to intended column order in Julia
+    ### (f1, f2): f1 -> column index in .mat.TrialList,
+    ordered_column_name_pairs = [
+        ([ Neurons.recording() for ii in 1:size(data_dict["TrialList"],1) ], "Neurons"),
+        ([ [ data_dict["EyeX"][.!isnan.(data_dict["EyeX"][:,trl]),trl], data_dict["EyeY"][.!isnan.(data_dict["EyeY"][:,trl]),trl] ] for trl in 1:size(data_dict["EyeY"],2) ], "EyeXY"),
+        (fill([[]],size(data_dict["TrialList"],1)), "Saccades"),
+        (fill([[]],size(data_dict["TrialList"],1)), "Saccades_clean"),
+        (fill([[]],size(data_dict["TrialList"],1)), "Fixations"),
+        (fill([],size(data_dict["TrialList"],1)), "LookedAtTarget"),
+        (data_dict["TrialList"][:,9], "TrialStartTime"),
+        (data_dict["TrialList"][:,10], "TrialEndTime"),
+        (fill(false, size(data_dict["TrialList"],1)), "Valid"),
+        (data_dict["TrialList"][:,24].==1, "Hit"),
+        (fill(false, size(data_dict["TrialList"],1)), "FA"),
+        (fill(false, size(data_dict["TrialList"],1)), "Invalid"),
+        (Array{Float64,1}(undef,size(data_dict["TrialList"],1)), "RTfirstFixation"),
+        (Array{Float64,1}(undef,size(data_dict["TrialList"],1)), "RTcorrectFixation"),
+        (data_dict["TrialList"][:,23].==1, "WasMissed"),                    ### !!! if this row changes, changes the part in mat2jdl() where missed trials are filtered out !!!
+        (data_dict["TrialList"][:,22].==1, "WasTimeout"),
+        (data_dict["TrialList"][:,16].+1, "ValidTargetIndex"),
+        (data_dict["TrialList"][:,12].+1, "CueTargetIndex"),
+        (data_dict["TrialList"][:,17].==1, "WasCueValid"),
+        # (data_dict["TrialList"][:,18].==1, "WasFixationFailureFixPt"),    ### redundant with WasMissed
+        # (data_dict["TrialList"][:,19].==1, "WasFixationFailureTarget"),   ### redundant with WasTimeout
+        (data_dict["TrialList"][:,14], "LuminanceChange"),
+        (data_dict["TrialList"][:,11], "LuminanceChangeTime"),
+        (data_dict["TrialList"][:,21], "PauseDuration"),
+        (data_dict["TrialList"][:,13], "ITI"),
+        (data_dict["TrialList"][:,15], "NumberOfNonFixFailTrials"),
+        (data_dict["TrialList"][:,20].==1, "WasLEDChangeActive")]
+
+
+    ### -- Now in Behavior.jl --- ###
+    # ### extract eye trace to store events in TrialList
+    # xy = [[data_dict["EyeX"][:,trl], data_dict["EyeY"][:,trl]] for trl in 1:size(data_dict["EyeY"], 2)];
+    # [deleteat!(xy[trl][dim], findall(isnan.(xy[trl][dim]))) for dim in [1,2], trl in 1:size(data_dict["EyeY"], 2)] # remove NaNs
+    # sf = data_dict["samplingRate"]
+
+    ### generate dataframe from ordered_column_name_pairs
+    trial_list = DataFrame([el[1] for el in ordered_column_name_pairs], [Symbol(el[2]) for el in ordered_column_name_pairs])
+
     return trial_list
 end
 
@@ -124,10 +95,11 @@ function mat2jdl(ifi, ofi)
 
         ### read mat files of runs specified in paths_to_mat_files and store the in data_dicts array
         data_dict = matread(mf_)
+        # @show data_dict
         #data_dict_ = deepcopy(data_dict)
 
         ### remove missed trials in data_dict
-        missed_trials_idx = findall(data_dict["TrialList"][:, 19].==1)
+        missed_trials_idx = findall(data_dict["TrialList"][:, 23].==1)
         ks = ["TargetY", "VoltX", "TargetX", "EyeT", "TargetTime", "EyeX", "EyeY", "VoltY"]
         for k in ks
             data_dict[k] = data_dict[k][:, setdiff(1:end, missed_trials_idx)]
@@ -149,17 +121,14 @@ function mat2jdl(ifi, ofi)
         print(" | trial_list extracted")
 
         ## get indices of valid and invalid trials
-        valid_trials_idx = findall( trial_list[!, :Valid] )
-        invalid_trials_idx = findall( trial_list[!, :Invalid] )
+        # valid_trials_idx = findall( trial_list[!, :Valid] )
 
         raw_data = data_of_run(
             "...",
             Date(mf_[end-26:end-17],"y-m-d"),
             DateTime(mf_[end-15:end-8],"H-M-S"),
             data_dict["samplingRate"],
-            trial_list,
-            filter( row -> row.Valid, trial_list ),
-            filter( row -> row.Invalid, trial_list ),
+            trial_list
         )
 
         ### store processed data to file
