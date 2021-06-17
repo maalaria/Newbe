@@ -1,20 +1,5 @@
-### experiment.jl
 
 
-```experiment.jl``` implements ```data_of_run::struct``` intended to hold the data of a single experimental session. ```data_of_run``` has the fields:
-
-+ ```date::Date```
-+ ```time::DateTime```
-+ ```sf::Float64```
-+ ```trial_list::DataFrame```
-
-```trial_list``` is its heart and intended to hold all data, eg. neural recodings of any form, eyetracking and other pshychophysical measures as well as all relevant independent variables in form of a ```DataFrame```. Each row represents one trial of the given session/ run.
-
-
-
-
-
-#######################
 .data_structure
 |
 |---- data_of_run::struct
@@ -49,7 +34,6 @@
             |---- NumberOfSaccades
             |---- NumberOfBlinks
 
-#######################
 .neurons
 |
 |---- neuron::mutable struct
@@ -63,7 +47,6 @@
 |
 |---- resample::function
 
-#######################
 .behavior
 |
 |---- getEyeEvents::function
