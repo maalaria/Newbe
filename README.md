@@ -1,5 +1,9 @@
+# Newbe
 
-### experiment.jl
+*Analyze neurons and behavior with Julia*  
+
+
+## experiment.jl
 
 ```experiment.jl``` implements ```data_of_run::struct``` which is intended to hold all the data of one experimental sessions/ run. It has the fields:
 
@@ -10,56 +14,40 @@
 
 ```trial_list``` is its heart, a DataFrame containing all dependent (eg. enural recordings, eyetracking data) and independent data. Each row represents a trial of the given session/ run.
 
+**Functions**  
+
++ ```trialList2DataFrame```   
++ ```mat2jdl```
 
 
 
-.data_structure
-|
-|---- data_of_run::struct
-      |
-      | ### FIELDS ###
-      |---- date::Date
-      |---- time::DateTime
-      |---- sf::Float64                                     ##### needs to be extended to contain eye tracking sf and myEphys sf
-      |---- trial_list_all::DataFrame
-            |
-      |---- trial_list_valid::DataFrame
-            |
-      |---- trial_list_invalid::DataFrame
-            |
-            | ### COLUMNS ### rows contain data of trials
-            |---- EyeXY
-            |---- Neurons                                   ######
-            |---- TrialTime
-            |---- ChangeTime
-            |---- CueTargetIndex
-            |---- ITI
-            |---- LuminanceChange
-            |---- ValidTargetIndex
-            |---- WasCueValid
-            |---- WasFixationFailureFixPt
-            |---- WasFixationFailureTarget
-            |---- WasLEDChangeActive
-            |---- WasPauseAdded
-            |---- WasTimeout
-            |---- Valid
-            |---- Invalid
-            |---- NumberOfSaccades
-            |---- NumberOfBlinks
+## behavior.jl
 
-.neurons
-|
-|---- neuron::mutable struct
-      |
-      |
-|
-|---- detect_spikes::function
-|
-|---- filter_trace::function
-            filtered data is stored on neuron.trace_preprocessed
-|
-|---- resample::function
+**Functions**  
 
-.behavior
-|
-|---- getEyeEvents::function
++ ```i_dt_wrapper```   
++ ```i_dt```
++ ```plot_eye_events```
++ ```identify_fixatedTargets```
+
+
+
+## neurons.jl
+
+**Functions**  
+
++ ```normalize_trace```   
++ ```filter_trace```
++ ```resample```
++ ```get_PSD```
++ ```find_redundant```
++ ```detect_spikes```
++ ```extract_isih```
++ ```extract_spikes```
++ ```extract_features```
++ ```cluster_spikes```
+
+PLOTTING  
+
++ ```plot_detection```
++ ```plot_waveforms```
