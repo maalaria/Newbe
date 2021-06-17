@@ -1,5 +1,4 @@
 
-#######################
 .data_structure
 |
 |---- data_of_run::struct
@@ -34,7 +33,6 @@
             |---- NumberOfSaccades
             |---- NumberOfBlinks
 
-#######################
 .neurons
 |
 |---- neuron::mutable struct
@@ -48,7 +46,6 @@
 |
 |---- resample::function
 
-#######################
 .behavior
 |
 |---- getEyeEvents::function
