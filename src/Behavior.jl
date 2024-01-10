@@ -346,7 +346,7 @@ end
 #################################################################################
 
 
-function i_dt(
+	function i_dt(
     xy_o::Array{Array{Float64,1},1},
     sf,
     fix_duration_threshold_sec,
@@ -363,8 +363,8 @@ function i_dt(
     # INPUT
     # fix_duration_threshold_sec: minimum duration of a fixation to be counted in sec
     # fix_dispersion_threshold: can be left empty then it is inferred from central fixation period in beginning of trials
-    # saccade_velocity_threshold: not normalized to sampling rate!
-    # saccade_duration_threshold: in sec
+    # saccade_velocity_threshold: is used to identify blinks or other noise among saccades, if the velocity is larger than the threshold it is labeled as a blink 
+    # saccade_duration_threshold: in sec, minimum duration of a saccade, shorter eposiodes are removed from the saccade list
     #
     # OUTPUT
     #   xy_: eye trace with blinks interpolated
@@ -376,8 +376,11 @@ function i_dt(
 
     if size(xy_o[1],1) > 1000 # if number of samples is lower empty arrays are returned
 
+
         xy = deepcopy(xy_o)
+        
         [deleteat!(xy[ii], findall(isnan.(xy[ii]))) for ii in 1:length(xy)] # remove NaNs
+        
         xy_ = deepcopy(xy) # to be returned with blinks interpolated
         xy_idxs = [collect(1:length(xy[1])), collect(1:length(xy[2]))] # array with corresponding indices
         fix_window_length = Int(fix_duration_threshold_sec * sf)
