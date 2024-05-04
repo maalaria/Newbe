@@ -33,7 +33,7 @@ function i_dt_wrapper(
     plot_saccades=false,
     plot_fixations=false,
     which_trials="all",
-    how_ = "mean",
+    how_ = "mean",x1
     which="Fixations_clean"
     )
 
@@ -362,14 +362,16 @@ function i_dt(
     #
     # INPUT
     # fix_duration_threshold_sec: minimum duration of a fixation to be counted in sec
-    # fix_dispersion_threshold: can be left empty then it is inferred from central fixation period in beginning of trials
-    # saccade_velocity_threshold: not normalized to sampling rate!
-    # saccade_duration_threshold: in sec
+    # fix_dispersion_threshold: can be left empty ([]) then it is inferred from central fixation period in beginning of trials
+    # saccade_velocity_threshold: maximum velocity of a natural saccade, used to remove blinks
+    #                               (not normalized to sampling rate)
+    # saccade_duration_threshold: minimum threshold in sec, used to remove implausible short saccades
     #
     # OUTPUT
     #   xy_: eye trace with blinks interpolated
+    #   fix_idx:
     #   sac_idx:
-    #
+    #   blink_idx
     #
     #
     ###########
@@ -474,7 +476,7 @@ function i_dt(
         [xy_[dim][blink_idx[bl]] .= interpolated_blinks[bl] for bl in 1:length(blink_idx), dim=1:2 ] # dim is x,y dimensions of eyedata -> bot needed
 
 
-        return xy_, fix_idx, sac_idx, blink_idx
+        return xy, xy_, fix_idx, sac_idx, blink_idx
 
     else
         return [], [], [], []
